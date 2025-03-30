@@ -13,41 +13,53 @@ public class Lexer {
     }
 
     // Типы токенов
+    // Типы токенов
     public enum TokenType {
         // Ключевые слова
-        KEYWORD_BEGIN, KEYWORD_END, KEYWORD_IF, KEYWORD_ELSE, KEYWORD_FOR,
-        KEYWORD_TO, KEYWORD_STEP, KEYWORD_NEXT, KEYWORD_WHILE,
-        KEYWORD_READLN, KEYWORD_WRITELN,
+        KEYWORD_BEGIN("Keyword"), KEYWORD_END("Keyword"), KEYWORD_IF("Keyword"),
+        KEYWORD_ELSE("Keyword"), KEYWORD_FOR("Keyword"), KEYWORD_TO("Keyword"),
+        KEYWORD_STEP("Keyword"), KEYWORD_NEXT("Keyword"), KEYWORD_WHILE("Keyword"),
+        KEYWORD_READLN("Keyword"), KEYWORD_WRITELN("Keyword"),
 
         // Типы данных
-        TYPE_INT,      // %
-        TYPE_FLOAT,    // !
-        TYPE_STRING,   // $
+        TYPE_INT("Type"),      // %
+        TYPE_FLOAT("Type"),    // !
+        TYPE_STRING("Type"),   // $
 
         // Операторы
-        OP_RELATION,   // !=, ==, <, <=, >, >=
-        OP_ADDITIVE,   // +, -, ||
-        OP_MULTIPLICATIVE, // *, /, &&
-        OP_UNARY,      // !
-        OP_ASSIGN,     // :=
+        OP_RELATION("Operator"),   // !=, ==, <, <=, >, >=
+        OP_ADDITIVE("Operator"),   // +, -, ||
+        OP_MULTIPLICATIVE("Operator"), // *, /, &&
+        OP_UNARY("Operator"),      // !
+        OP_ASSIGN("Operator"),     // :=
 
         // Разделители
-        SEMICOLON,     // ;
-        COLON,         // :
-        COMMA,         // ,
-        LPAREN,        // (
-        RPAREN,        // )
+        SEMICOLON("Delimiter"),     // ;
+        COLON("Delimiter"),         // :
+        COMMA("Delimiter"),         // ,
+        LPAREN("Delimiter"),        // (
+        RPAREN("Delimiter"),        // )
 
         // Идентификаторы и литералы
-        IDENTIFIER,
-        INTEGER_LITERAL,
-        FLOAT_LITERAL,
-        STRING_LITERAL,
+        IDENTIFIER("Identifier"),
+        INTEGER_LITERAL("Literal"),
+        FLOAT_LITERAL("Literal"),
+        STRING_LITERAL("Literal"),
 
         // Комментарии и прочее
-        COMMENT,
-        NEWLINE,
-        EOF
+        COMMENT("Comment"),
+        NEWLINE("Newline"),
+        EOF("EOF");
+
+        private final String category;
+
+        TokenType(String category) {
+            this.category = category;
+        }
+
+        public String getCategory() {
+            return category;
+        }
     }
 
     // Класс для представления токена
@@ -388,18 +400,44 @@ public class Lexer {
         tokens.add(new Token(TokenType.EOF, "", lineNumber));
         return tokens;
     }
+    // Метод для красивого вывода таблицы
+    private static void printTokensTable(List<Token> tokens) {
+        System.out.println("┌───────┬───────────────────────┬───────────────────────────────┐");
+        System.out.println("│ Line  │ Lexeme                │ Type                          │");
+        System.out.println("├───────┼───────────────────────┼───────────────────────────────┤");
+
+        for (int i = 0; i < tokens.size(); i++) {
+            Token token = tokens.get(i);
+            String lineNo = token.lineNumber > 0 ? String.valueOf(token.lineNumber) : "";
+            String lexeme = token.value.replace("\n", "\\n")
+                    .replace("\t", "\\t")
+                    .replace("\r", "\\r");
+
+            // Обрезаем слишком длинные лексемы
+            if (lexeme.length() > 41) {
+                lexeme = lexeme.substring(0, 17) + "...";
+            }
+
+            String type = token.type.getCategory() + " (" + token.type + ")";
+            if (type.length() > 41) {
+                type = type.substring(0, 17) + "...";
+            }
+
+            System.out.printf("│ %-5s │ %-21s │ %-29s │%n", lineNo, lexeme, type);
+        }
+
+        System.out.println("└───────┴───────────────────────┴───────────────────────────────┘");
+    }
 
     // Пример использования
     public static void main(String[] args) {
         String testProgram =
                 "(* Sample program *)\n" +
-                        "for (  int j := X; i < 5; i := i + 1) do\n" ;
+                        " for (  int j := X; i < 5; i := i + 1) do\n" ;
 
         var lexer = new Lexer(testProgram);
         List<Token> tokens = lexer.tokenize();
 
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        printTokensTable(tokens);
     }
 }
