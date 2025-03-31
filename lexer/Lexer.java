@@ -304,9 +304,9 @@ public class Lexer {
     }
 
     public static void printTokensTable(List<Token> tokens) {
-        System.out.println("┌───────┬───────────────────────┬───────────────────────┐");
-        System.out.println("│ Line  │ Lexeme                │ Type                  │");
-        System.out.println("├───────┼───────────────────────┼───────────────────────┤");
+        System.out.println("┌───────┬─────────────────────────┬─────────────────────────────┐");
+        System.out.println("│ Line  │ Lexeme                  │ Type                        │");
+        System.out.println("├───────┼─────────────────────────┼─────────────────────────────┤");
 
         for (Token token : tokens) {
             String lineNo = token.lineNumber > 0 ? String.valueOf(token.lineNumber) : "";
@@ -315,18 +315,18 @@ public class Lexer {
                     .replace("\t", "\\t")
                     .replace("\r", "\\r");
 
-            if (lexeme.length() > 20) {
+            if (lexeme.length() > 22) {
                 lexeme = lexeme.substring(0, 17) + "...";
             }
 
             String type = token.type.getCategory() + " (" + token.type + ")";
-            if (type.length() > 20) {
+            if (type.length() > 26) {
                 type = type.substring(0, 17) + "...";
             }
 
-            System.out.printf("│ %-5s │ %-21s │ %-21s │%n", lineNo, lexeme, type);
+            System.out.printf("│ %-5s │ %-23s │ %-27s │%n", lineNo, lexeme, type);
         }
 
-        System.out.println("└───────┴───────────────────────┴───────────────────────┘");
+        System.out.println("└───────┴─────────────────────────┴─────────────────────────────┘");
     }
 }
