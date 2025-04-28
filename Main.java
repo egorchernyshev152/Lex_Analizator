@@ -1,5 +1,7 @@
 import lexer.Lexer;
 import lexer.Token;
+import utils.HashTable;
+import utils.BinarySearchTree;
 import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,5 +31,27 @@ public class Main {
         List<Token> tokens = lexer.tokenize();
 
         Lexer.printTokensTable(tokens);
+
+// Работа с хэш-таблицей
+        HashTable<String, String> table = new HashTable<>();
+        for (Token token : tokens) {
+            if (token.type == Token.TokenType.IDENTIFIER || token.type.name().startsWith("KEYWORD")) {
+                table.put(token.value, token.type.toString());
+            }
+        }
+        System.out.println("\nХэш-таблица токенов:");
+        table.printTable();
+
+// Работа с бинарным деревом поиска (идентификаторы и ключевые слова)
+        BinarySearchTree<String> bst = new BinarySearchTree<>();
+        for (Token token : tokens) {
+            if (token.type == Token.TokenType.IDENTIFIER || token.type.name().startsWith("KEYWORD")) {
+                int groupNumber = token.type.name().startsWith("KEYWORD") ? 1 : 2;
+                bst.insert(token.value, groupNumber);
+            }
+        }
+        System.out.println("\nБинарное дерево поиска (идентификаторы и ключевые слова):");
+        bst.inOrderTraversal();
+        bst.printTree();
     }
 }
