@@ -12,8 +12,6 @@ public class Main {
         // Проверяем, передан ли аргумент (путь к файлу)
         if (args.length == 0) {
             System.err.println("Ошибка: Укажите путь к файлу с исходным кодом.");
-            System.err.println("Пример: java Main program.txt");
-            return;
         }
 
         String filePath = args[0];

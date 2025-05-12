@@ -37,7 +37,7 @@ public class BinarySearchTree<T extends Comparable<T>> {
     }
 
     public void inOrderTraversal() {
-        System.out.println("In-order traversal:");
+        System.out.println("Сначала по алфавиту:");
         inOrderRec(root);
         System.out.println();
     }
@@ -52,7 +52,7 @@ public class BinarySearchTree<T extends Comparable<T>> {
 
     // Красивый вывод дерева
     public void printTree() {
-        System.out.println("Binary Search Tree (beautiful view):");
+        System.out.println("А теперь - графический вариант:");
         printTreeRec(root, "", true);
     }
 
