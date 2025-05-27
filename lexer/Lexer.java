@@ -3,10 +3,15 @@ package lexer;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Класс Lexer выполняет лексический анализ входного текста.
+ * Он преобразует исходный код в последовательность лексем (токенов).
+ * Поддерживает ключевые слова, идентификаторы, числа, строки, комментарии и операторы.
+ */
 public class Lexer {
-    private final String input;
-    private int position;
-    private int lineNumber;
+    private final String input;  // Входной текст для разбора
+    private int position;        // Текущая позиция
+    private int lineNumber;      // Номер текущей строки для сообщений об ошибках и токенов
 
     public Lexer(String input) {
         this.input = input;
@@ -14,39 +19,47 @@ public class Lexer {
         this.lineNumber = 1;
     }
 
+    // Проверка конца файла
     private boolean isEOF() {
         return position >= input.length();
     }
 
+    // Просмотр текущего символа без сдвига позиции
     private char peek() {
         return isEOF() ? '\0' : input.charAt(position);
     }
 
+    // Считать текущий символ и сдвинуть позицию на 1
     private char next() {
         if (isEOF()) return '\0';
         char c = input.charAt(position++);
-        if (c == '\n') lineNumber++;
+        if (c == '\n') lineNumber++;  // Учет перехода на новую строку
         return c;
     }
 
+    // Пропустить пробельные символы (кроме переноса строки)
     private void skipWhitespace() {
         while (!isEOF() && Character.isWhitespace(peek()) && peek() != '\n') {
             next();
         }
     }
 
+    // Может ли символ быть началом идентификатора
     private boolean isIdentifierStart(char c) {
         return Character.isLetter(c) || c == '_';
     }
 
+    // Может ли символ быть частью идентификатора
     private boolean isIdentifierPart(char c) {
         return Character.isLetterOrDigit(c) || c == '_';
     }
 
+    // Является ли символ цифрой
     private boolean isDigit(char c) {
         return Character.isDigit(c);
     }
 
+    // Считывается идентификатор или ключевое слово
     private Token readIdentifierOrKeyword() {
         int start = position;
         while (!isEOF() && isIdentifierPart(peek())) {
@@ -54,6 +67,7 @@ public class Lexer {
         }
         String value = input.substring(start, position);
 
+        // Является ли прочитанное ключевым словом (регистр не важен)
         switch (value.toLowerCase()) {
             case "begin": return new Token(Token.TokenType.KEYWORD_BEGIN, value, lineNumber);
             case "end": return new Token(Token.TokenType.KEYWORD_END, value, lineNumber);
@@ -70,14 +84,17 @@ public class Lexer {
         }
     }
 
+    // Считывается числовой литерал: целое или с плавающей точкой
     private Token readNumber() {
         int start = position;
         boolean isFloat = false;
 
+        // Считать цифры целой части
         while (!isEOF() && isDigit(peek())) {
             next();
         }
 
+        // Если есть точка, то считываем дробную часть
         if (!isEOF() && peek() == '.') {
             isFloat = true;
             next();
@@ -114,7 +131,7 @@ public class Lexer {
         }
 
         if (isEOF()) {
-            throw new RuntimeException("Unterminated string literal at line " + lineNumber);
+            throw new RuntimeException("Непрерванный строковый литерал в строке " + lineNumber);
         }
 
         next(); // Пропускаем закрывающую кавычку
@@ -141,7 +158,7 @@ public class Lexer {
             sb.append(next());
         }
 
-        throw new RuntimeException("Unterminated comment starting at line " + startLine);
+        throw new RuntimeException("Непрерванный комментарий, начинающийся со строки " + startLine);
     }
 
     private Token readRelationOperator() {
@@ -173,7 +190,7 @@ public class Lexer {
                 }
                 return new Token(Token.TokenType.OP_RELATION, ">", lineNumber);
             default:
-                throw new RuntimeException("Unexpected character: " + firstChar);
+                throw new RuntimeException("Невыявленный символ: " + firstChar);
         }
     }
 
@@ -183,9 +200,13 @@ public class Lexer {
             next();
             return new Token(Token.TokenType.OP_ASSIGN, ":=", lineNumber);
         }
-        throw new RuntimeException("Unexpected character: " + firstChar);
+        throw new RuntimeException("Невыявленный символ: " + firstChar);
     }
 
+    /**
+    * Главный метод лексического анализа: преобразует весь входной текст
+     * в список токенов с указанием типа и номера строки.
+            */
     public List<Token> tokenize() {
         List<Token> tokens = new ArrayList<>();
 
@@ -222,6 +243,7 @@ public class Lexer {
                 continue;
             }
 
+            // Обработка операторов и разделителей
             switch (current) {
                 case ';':
                     next();
@@ -257,7 +279,7 @@ public class Lexer {
                         next(); next();
                         tokens.add(new Token(Token.TokenType.OP_ADDITIVE, "||", lineNumber));
                     } else {
-                        throw new RuntimeException("Unexpected character: " + current);
+                        throw new RuntimeException("Невыявленный символ: " + current);
                     }
                     break;
                 case '*':
@@ -270,7 +292,7 @@ public class Lexer {
                         next(); next();
                         tokens.add(new Token(Token.TokenType.OP_MULTIPLICATIVE, "&&", lineNumber));
                     } else {
-                        throw new RuntimeException("Unexpected character: " + current);
+                        throw new RuntimeException("Невыявленный символ: " + current);
                     }
                     break;
                 case '%':
@@ -295,7 +317,7 @@ public class Lexer {
                     tokens.add(readRelationOperator());
                     break;
                 default:
-                    throw new RuntimeException("Unexpected character: " + current + " at line " + lineNumber);
+                    throw new RuntimeException("Невыявленный символ: " + current + " в строке " + lineNumber);
             }
         }
 
@@ -303,10 +325,11 @@ public class Lexer {
         return tokens;
     }
 
+    // Метод для вывода таблицы токенов
     public static void printTokensTable(List<Token> tokens) {
-        System.out.println("┌───────┬─────────────────────────┬─────────────────────────────┐");
-        System.out.println("│ Line  │ Lexeme                  │ Type                        │");
-        System.out.println("├───────┼─────────────────────────┼─────────────────────────────┤");
+        System.out.println("┌─────────┬─────────────────────────┬─────────────────────────────┐");
+        System.out.println("│ Строка  │ Лексема                 │ Тип                         │");
+        System.out.println("├─────────┼─────────────────────────┼─────────────────────────────┤");
 
         for (Token token : tokens) {
             String lineNo = token.lineNumber > 0 ? String.valueOf(token.lineNumber) : "";
@@ -324,9 +347,9 @@ public class Lexer {
                 type = type.substring(0, 17) + "...";
             }
 
-            System.out.printf("│ %-5s │ %-23s │ %-27s │%n", lineNo, lexeme, type);
+            System.out.printf("│ %-7s │ %-23s │ %-27s │%n", lineNo, lexeme, type);
         }
 
-        System.out.println("└───────┴─────────────────────────┴─────────────────────────────┘");
+        System.out.println("└─────────┴─────────────────────────┴─────────────────────────────┘");
     }
 }

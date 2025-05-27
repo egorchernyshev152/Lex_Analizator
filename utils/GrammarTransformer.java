@@ -2,6 +2,7 @@ package utils;
 
 import java.util.*;
 
+// Класс GrammarTransformer содержит логику нормализации контекстно-свободной грамматики
 public class GrammarTransformer {
 
     public static class Grammar {
@@ -20,8 +21,8 @@ public class GrammarTransformer {
         public void printGrammar() {
             System.out.println("VN = " + VN);
             System.out.println("VT = " + VT);
-            System.out.println("Start symbol = " + startSymbol);
-            System.out.println("Rules:");
+            System.out.println("Начальный символ = " + startSymbol);
+            System.out.println("Правила:");
             for (String lhs : rules.keySet()) {
                 for (String rhs : rules.get(lhs)) {
                     System.out.println("  " + lhs + " → " + rhs);
@@ -31,12 +32,12 @@ public class GrammarTransformer {
     }
 
     public static Grammar transformGrammar() {
-        // Исходные множества
+        // Исходные множества нетерминалов, терминалов и стартового символа
         Set<String> VN = new HashSet<>(Arrays.asList("S", "L", "M", "P", "N"));
         Set<String> VT = new HashSet<>(Arrays.asList("n", "m", "l", "p", "@", "⊥"));
         String S = "S";
 
-        // Исходные правила (P)
+        // Исходные правила грамматики
         Map<String, List<String>> P = new LinkedHashMap<>();
         P.put("S", new ArrayList<>(Arrays.asList("@nL", "@mM", "P")));
         P.put("L", new ArrayList<>(Arrays.asList("M", "Ll⊥", "Lm⊥", "ε")));
@@ -44,13 +45,14 @@ public class GrammarTransformer {
         P.put("N", new ArrayList<>(Arrays.asList("pN@", "@")));
         P.put("P", new ArrayList<>(Arrays.asList("nmP")));
 
-        // === Шаг 1: Проверка существования языка ===
+        // Проверка существования языка
         Set<String> generating = new HashSet<>();
         boolean changed;
         do {
             changed = false;
             for (String lhs : P.keySet()) {
                 for (String rhs : P.get(lhs)) {
+                    // Правило генерационно (т.е. порождает минимум одну цепочку из терминалов), если rhs — ε или все символы rhs — терминалы или уже известные генераторы
                     if (rhs.equals("ε") || rhs.chars().allMatch(c -> VT.contains(String.valueOf((char) c)) || generating.contains(String.valueOf((char) c)))) {
                         if (generating.add(lhs)) {
                             changed = true;
@@ -60,24 +62,26 @@ public class GrammarTransformer {
             }
         } while (changed);
 
+        // Если стартовый символ не генератор, то язык пуст
         if (!generating.contains(S)) {
-            throw new RuntimeException("Язык грамматики пуст (Start symbol is not generating)");
+            throw new RuntimeException("Язык грамматики пуст");
         }
 
-        // === Шаг 2: Удаление бесполезных символов ===
+        // Удаление бесполезных символов
         Set<String> VN1 = new HashSet<>(VN);
-        VN1.retainAll(generating);
-        P.keySet().retainAll(VN1);
+        VN1.retainAll(generating); // Оставляем только генераторы
         for (String key : new ArrayList<>(P.keySet())) {
+            // Удаляем правые части, содержащие неггенерирующие нетерминалы
             P.get(key).removeIf(rhs -> Arrays.stream(rhs.split("")).anyMatch(sym -> VN.contains(sym) && !generating.contains(sym)));
         }
 
-        // === Шаг 3: Удаление недостижимых символов ===
+        // Удаление недостижимых символов
         Set<String> reachable = new HashSet<>();
-        reachable.add(S);
+        reachable.add(S); // Стартовый символ достижим
         Queue<String> queue = new LinkedList<>();
         queue.add(S);
 
+        // BFS по правилам для определения достижимых символов
         while (!queue.isEmpty()) {
             String current = queue.poll();
             for (String rhs : P.getOrDefault(current, Collections.emptyList())) {
@@ -90,15 +94,18 @@ public class GrammarTransformer {
             }
         }
 
+        // Оставляем только достижимые символы
         VN1.retainAll(reachable);
         VT.retainAll(reachable);
         P.keySet().retainAll(VN1);
         for (String key : new ArrayList<>(P.keySet())) {
+            // Удаляем правые части, содержащие недостижимые символы
             P.get(key).removeIf(rhs -> Arrays.stream(rhs.split("")).anyMatch(sym -> (VN.contains(sym) || VT.contains(sym)) && !reachable.contains(sym)));
         }
 
-        // === Шаг 4: Удаление ε-правил (учитывается L → ε) ===
+        // Удаление ε-правил
         Set<String> nullable = new HashSet<>();
+        // Определяем nullable нетерминалы (порождающие ε)
         for (String lhs : P.keySet()) {
             for (String rhs : P.get(lhs)) {
                 if (rhs.equals("ε")) {
@@ -107,13 +114,15 @@ public class GrammarTransformer {
             }
         }
 
+        // Создаем новые правила, исключая ε, но с добавлением всех вариантов без nullable символов
         Map<String, List<String>> newRules = new LinkedHashMap<>();
         for (String lhs : P.keySet()) {
             Set<String> newRHS = new HashSet<>();
             for (String rhs : P.get(lhs)) {
-                if (rhs.equals("ε")) continue;
+                if (rhs.equals("ε")) continue; // пропускаем ε, оно будет учтено косвенно
                 newRHS.add(rhs);
 
+                // Ищем позиции nullable символов в правой части
                 List<Integer> nullablePositions = new ArrayList<>();
                 String[] symbols = rhs.split("");
                 for (int i = 0; i < symbols.length; i++) {
@@ -122,12 +131,14 @@ public class GrammarTransformer {
                     }
                 }
 
+                // Перебираем все комбинации исключения nullable символов
                 int combinations = 1 << nullablePositions.size();
                 for (int mask = 1; mask < combinations; mask++) {
                     StringBuilder newStr = new StringBuilder();
                     for (int i = 0; i < symbols.length; i++) {
                         if (nullablePositions.contains(i)) {
                             int bitIndex = nullablePositions.indexOf(i);
+                            // Если бит равен 0 — исключаем символ, иначе оставляем
                             if ((mask & (1 << bitIndex)) == 0) {
                                 newStr.append(symbols[i]);
                             }
@@ -143,6 +154,7 @@ public class GrammarTransformer {
             newRules.put(lhs, new ArrayList<>(newRHS));
         }
 
+        // Возвращаем нормализованную грамматику
         return new Grammar(VN1, VT, S, newRules);
     }
 

@@ -1,12 +1,10 @@
 package utils;
 
-import lexer.Token;
-
 public class BinarySearchTree<T extends Comparable<T>> {
     private static class Node<T> {
         T key;
         int tableNumber; // Номер группы: 1 — ключевые слова, 2 — идентификаторы
-        int id;          // Порядковый номер лексемы
+        int id;          // Номер лексемы
         Node<T> left, right;
 
         Node(T key, int tableNumber, int id) {
@@ -16,14 +14,19 @@ public class BinarySearchTree<T extends Comparable<T>> {
         }
     }
 
+    // Корень дерева
     private Node<T> root;
-    private int nodeCount = 0; // Порядковый номер для всех узлов
 
+    // Счётчик уникального номера каждому новому узлу
+    private int nodeCount = 0;
+
+    // Вставка нового ключа в дерево
     public void insert(T key, int tableNumber) {
         nodeCount++;
         root = insertRec(root, key, tableNumber, nodeCount);
     }
 
+    // Рекурсивная функция вставки нового узла в бинарное дерево поиска
     private Node<T> insertRec(Node<T> node, T key, int tableNumber, int id) {
         if (node == null) {
             return new Node<>(key, tableNumber, id);
@@ -42,6 +45,7 @@ public class BinarySearchTree<T extends Comparable<T>> {
         System.out.println();
     }
 
+    // Рекурсивная функция обхода дерева
     private void inOrderRec(Node<T> node) {
         if (node != null) {
             inOrderRec(node.left);
@@ -50,9 +54,9 @@ public class BinarySearchTree<T extends Comparable<T>> {
         }
     }
 
-    // Красивый вывод дерева
+    // Вывод дерева
     public void printTree() {
-        System.out.println("А теперь - графический вариант:");
+        System.out.println("\nА теперь - графический вариант:");
         printTreeRec(root, "", true);
     }
 
