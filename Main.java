@@ -1,108 +1,70 @@
-import lexer.Lexer;
-import lexer.Token;
-import parser.Grammar;
-import parser.FirstFollow;
-import parser.ParseTable;
-import parser.LL1Parser;
-import utils.HashTable;
-import utils.BinarySearchTree;
-
-import java.util.List;
-import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.io.IOException;
+import java.util.List;
+
+import lexer.Lexer;
+import lexer.Token;
+import lexer.Token.TokenType;
+
+import static utils.HashTable.printSortedTable;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         if (args.length == 0) {
-            System.err.println("Ошибка: Укажите путь к файлу с исходным кодом.");
+            System.err.println("Использование: java Main <sourcefile>");
             return;
         }
 
-        String filePath = args[0];
-        String testProgram;
-
+        String source = new String(Files.readAllBytes(Paths.get(args[0])));
+        Lexer lexer = new Lexer(source);
+        List<Token> tokens;
         try {
-            testProgram = Files.readString(Paths.get(filePath));
-        } catch (IOException e) {
-            System.err.println("Ошибка при чтении файла: " + e.getMessage());
+            tokens = lexer.tokenize();
+        } catch (RuntimeException e) {
+            System.err.println("Ошибка лексического анализа: " + e.getMessage());
             return;
         }
 
-        Lexer lexer = new Lexer(testProgram);
-        List<Token> tokens = lexer.tokenize();
+        System.out.println("=== Таблица ключевых слов (имя → индекс) ===");
+        printSortedTable(lexer.getKeywordTable());
 
-        Lexer.printTokensTable(tokens);
+        System.out.println("\n=== Таблица идентификаторов (имя → индекс) ===");
+        printSortedTable(lexer.getIdentifierTable());
 
-        // Хэш-таблица токенов
-        HashTable<String, String> table = new HashTable<>();
+        List<String> tokenValues = getTokenValuesForParser(tokens);
+        System.out.println("\n=== Token Values (для LL(1)) ===");
+        System.out.println(tokenValues);
+    }
+
+    private static List<String> getTokenValuesForParser(List<Token> tokens) {
+        List<String> tokenValues = new java.util.ArrayList<>();
         for (Token token : tokens) {
-            if (token.type == Token.TokenType.IDENTIFIER || token.type.name().startsWith("KEYWORD")) {
-                table.put(token.value, token.type.toString());
-            }
-        }
-        System.out.println("\nХэш-таблица токенов:");
-        table.printTable();
-
-        // Бинарное дерево поиска
-        BinarySearchTree<String> bst = new BinarySearchTree<>();
-        for (Token token : tokens) {
-            if (token.type == Token.TokenType.IDENTIFIER || token.type.name().startsWith("KEYWORD")) {
-                int groupNumber = token.type.name().startsWith("KEYWORD") ? 1 : 2;
-                bst.insert(token.value, groupNumber);
-            }
-        }
-        System.out.println("\nБинарное дерево поиска (идентификаторы и ключевые слова):");
-        bst.inOrderTraversal();
-        bst.printTree();
-
-        // Парсинг
-
-        // Преобразуем токены в список терминальных символов
-        List<String> inputTerminals = new ArrayList<>();
-        for (Token token : tokens) {
-            if (token.type == Token.TokenType.COMMENT || token.type == Token.TokenType.NEWLINE) {
+            if (token.type == TokenType.WHITESPACE
+                    || token.type == TokenType.NEWLINE
+                    || token.type == TokenType.COMMENT) {
                 continue;
             }
             switch (token.type) {
                 case IDENTIFIER:
-                    inputTerminals.add("IDENTIFIER");
+                    tokenValues.add("IDENTIFIER");
                     break;
                 case INTEGER_LITERAL:
-                    inputTerminals.add("INTEGER_LITERAL");
+                    tokenValues.add("INTEGER_LITERAL");
                     break;
                 case FLOAT_LITERAL:
-                    inputTerminals.add("FLOAT_LITERAL");
+                    tokenValues.add("FLOAT_LITERAL");
                     break;
                 case STRING_LITERAL:
-                    inputTerminals.add("STRING_LITERAL");
+                    tokenValues.add("STRING_LITERAL");
                     break;
                 default:
-                    // Для ключевых слов, операторов, разделителей — проверяем, что value не пустое
                     if (!token.value.isEmpty()) {
-                        inputTerminals.add(token.value);
+                        tokenValues.add(token.value);
                     }
+                    break;
             }
         }
-        inputTerminals.add("$"); // маркер конца
-
-
-        // Загружаем грамматику
-        Grammar grammar = Grammar.exampleGrammar();
-
-        // Вычисляем FIRST и FOLLOW
-        FirstFollow ff = new FirstFollow(grammar);
-        ff.printFirstFollow();
-
-        // Строим таблицу синтаксического анализа
-        ParseTable parseTable = new ParseTable(grammar, ff);
-        parseTable.printParseTable();
-
-        // Создаём парсер и запускаем разбор
-        LL1Parser parser = new LL1Parser(grammar, parseTable);
-        boolean result = parser.parse(inputTerminals);
-
-        System.out.println("\nРезультат разбора: " + (result ? "Успешен" : "Ошибка"));
+        tokenValues.add("$");
+        return tokenValues;
     }
 }

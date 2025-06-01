@@ -1,165 +1,132 @@
 package utils;
 
+import parser.Grammar;
 import java.util.*;
 
-// Класс GrammarTransformer содержит логику нормализации контекстно-свободной грамматики
+/**
+ * Класс GrammarTransformer нормализует контекстно-свободную грамматику:
+ * 1) Удаляет негенерирующие и недостижимые символы
+ * 2) Удаляет ε-правила, добавляя все комбинации без nullable-символов
+ * В этом файле также выводится результат нормализации.
+ */
 public class GrammarTransformer {
 
-    public static class Grammar {
-        public Set<String> VN = new HashSet<>();
-        public Set<String> VT = new HashSet<>();
-        public String startSymbol;
-        public Map<String, List<String>> rules = new LinkedHashMap<>();
+    public static Grammar transformGrammar(Grammar inputGrammar) {
+        // Копируем множества
+        Set<String> VN = new HashSet<>(inputGrammar.getNonTerminals());
+        Set<String> VT = new HashSet<>(inputGrammar.getTerminals());
+        String S = inputGrammar.getStartSymbol();
 
-        public Grammar(Set<String> vn, Set<String> vt, String start, Map<String, List<String>> rules) {
-            this.VN.addAll(vn);
-            this.VT.addAll(vt);
-            this.startSymbol = start;
-            this.rules.putAll(rules);
-        }
-
-        public void printGrammar() {
-            System.out.println("VN = " + VN);
-            System.out.println("VT = " + VT);
-            System.out.println("Начальный символ = " + startSymbol);
-            System.out.println("Правила:");
-            for (String lhs : rules.keySet()) {
-                for (String rhs : rules.get(lhs)) {
-                    System.out.println("  " + lhs + " → " + rhs);
-                }
+        // Копируем правила в изменяемую структуру
+        Map<String, List<List<String>>> P = new LinkedHashMap<>();
+        for (var entry : inputGrammar.getProductions().entrySet()) {
+            List<List<String>> clones = new ArrayList<>();
+            for (List<String> rhs : entry.getValue()) {
+                clones.add(new ArrayList<>(rhs));
             }
+            P.put(entry.getKey(), clones);
         }
-    }
 
-    public static Grammar transformGrammar() {
-        // Исходные множества нетерминалов, терминалов и стартового символа
-        Set<String> VN = new HashSet<>(Arrays.asList("S", "L", "M", "P", "N"));
-        Set<String> VT = new HashSet<>(Arrays.asList("n", "m", "l", "p", "@", "⊥"));
-        String S = "S";
-
-        // Исходные правила грамматики
-        Map<String, List<String>> P = new LinkedHashMap<>();
-        P.put("S", new ArrayList<>(Arrays.asList("@nL", "@mM", "P")));
-        P.put("L", new ArrayList<>(Arrays.asList("M", "Ll⊥", "Lm⊥", "ε")));
-        P.put("M", new ArrayList<>(Arrays.asList("L", "Mm", "mm")));
-        P.put("N", new ArrayList<>(Arrays.asList("pN@", "@")));
-        P.put("P", new ArrayList<>(Arrays.asList("nmP")));
-
-        // Проверка существования языка
+        // 1) Находим генерирующие нетерминалы
         Set<String> generating = new HashSet<>();
         boolean changed;
         do {
             changed = false;
-            for (String lhs : P.keySet()) {
-                for (String rhs : P.get(lhs)) {
-                    // Правило генерационно (т.е. порождает минимум одну цепочку из терминалов), если rhs — ε или все символы rhs — терминалы или уже известные генераторы
-                    if (rhs.equals("ε") || rhs.chars().allMatch(c -> VT.contains(String.valueOf((char) c)) || generating.contains(String.valueOf((char) c)))) {
-                        if (generating.add(lhs)) {
-                            changed = true;
-                        }
+            for (var lhs : P.keySet()) {
+                for (var rhs : P.get(lhs)) {
+                    if ((rhs.size() == 1 && rhs.get(0).equals("ε")) ||
+                            rhs.stream().allMatch(sym -> VT.contains(sym) || generating.contains(sym))) {
+                        if (generating.add(lhs)) changed = true;
                     }
                 }
             }
         } while (changed);
 
-        // Если стартовый символ не генератор, то язык пуст
         if (!generating.contains(S)) {
-            throw new RuntimeException("Язык грамматики пуст");
+            System.out.println("Язык грамматики пуст");
+            return new Grammar(Collections.emptySet(), Collections.emptySet(), S, Collections.emptyMap());
         }
 
-        // Удаление бесполезных символов
+        // 2) Удаляем негенерирующие
         Set<String> VN1 = new HashSet<>(VN);
-        VN1.retainAll(generating); // Оставляем только генераторы
-        for (String key : new ArrayList<>(P.keySet())) {
-            // Удаляем правые части, содержащие неггенерирующие нетерминалы
-            P.get(key).removeIf(rhs -> Arrays.stream(rhs.split("")).anyMatch(sym -> VN.contains(sym) && !generating.contains(sym)));
+        VN1.retainAll(generating);
+        P.keySet().removeIf(nt -> !VN1.contains(nt));
+        for (var list : P.values()) {
+            list.removeIf(rhs -> rhs.stream().anyMatch(sym -> VN.contains(sym) && !generating.contains(sym)));
         }
 
-        // Удаление недостижимых символов
+        // 3) Удаляем недостижимые
         Set<String> reachable = new HashSet<>();
-        reachable.add(S); // Стартовый символ достижим
         Queue<String> queue = new LinkedList<>();
+        reachable.add(S);
         queue.add(S);
-
-        // BFS по правилам для определения достижимых символов
         while (!queue.isEmpty()) {
-            String current = queue.poll();
-            for (String rhs : P.getOrDefault(current, Collections.emptyList())) {
-                for (String sym : rhs.split("")) {
-                    if ((VN.contains(sym) || VT.contains(sym)) && !reachable.contains(sym)) {
-                        reachable.add(sym);
+            String cur = queue.poll();
+            for (var rhs : P.getOrDefault(cur, Collections.emptyList())) {
+                for (String sym : rhs) {
+                    if ((VN.contains(sym) || VT.contains(sym)) && reachable.add(sym) && VN.contains(sym)) {
                         queue.add(sym);
                     }
                 }
             }
         }
-
-        // Оставляем только достижимые символы
         VN1.retainAll(reachable);
         VT.retainAll(reachable);
-        P.keySet().retainAll(VN1);
-        for (String key : new ArrayList<>(P.keySet())) {
-            // Удаляем правые части, содержащие недостижимые символы
-            P.get(key).removeIf(rhs -> Arrays.stream(rhs.split("")).anyMatch(sym -> (VN.contains(sym) || VT.contains(sym)) && !reachable.contains(sym)));
+        P.keySet().removeIf(nt -> !VN1.contains(nt));
+        for (var list : P.values()) {
+            list.removeIf(rhs -> rhs.stream().anyMatch(sym -> (VN.contains(sym) || VT.contains(sym)) && !reachable.contains(sym)));
         }
 
-        // Удаление ε-правил
+        // 4) Удаляем ε-продукции
         Set<String> nullable = new HashSet<>();
-        // Определяем nullable нетерминалы (порождающие ε)
-        for (String lhs : P.keySet()) {
-            for (String rhs : P.get(lhs)) {
-                if (rhs.equals("ε")) {
+        for (var lhs : P.keySet()) {
+            for (var rhs : P.get(lhs)) {
+                if (rhs.size() == 1 && rhs.get(0).equals("ε")) {
                     nullable.add(lhs);
+                    break;
                 }
             }
         }
 
-        // Создаем новые правила, исключая ε, но с добавлением всех вариантов без nullable символов
-        Map<String, List<String>> newRules = new LinkedHashMap<>();
+        Map<String, List<List<String>>> newRules = new LinkedHashMap<>();
         for (String lhs : P.keySet()) {
-            Set<String> newRHS = new HashSet<>();
-            for (String rhs : P.get(lhs)) {
-                if (rhs.equals("ε")) continue; // пропускаем ε, оно будет учтено косвенно
-                newRHS.add(rhs);
-
-                // Ищем позиции nullable символов в правой части
-                List<Integer> nullablePositions = new ArrayList<>();
-                String[] symbols = rhs.split("");
-                for (int i = 0; i < symbols.length; i++) {
-                    if (nullable.contains(symbols[i])) {
-                        nullablePositions.add(i);
-                    }
+            Set<List<String>> newRHSSet = new LinkedHashSet<>();
+            for (List<String> rhs : P.get(lhs)) {
+                if (rhs.size() == 1 && rhs.get(0).equals("ε")) continue;
+                newRHSSet.add(new ArrayList<>(rhs));
+                List<Integer> pos = new ArrayList<>();
+                for (int i = 0; i < rhs.size(); i++) {
+                    if (nullable.contains(rhs.get(i))) pos.add(i);
                 }
-
-                // Перебираем все комбинации исключения nullable символов
-                int combinations = 1 << nullablePositions.size();
-                for (int mask = 1; mask < combinations; mask++) {
-                    StringBuilder newStr = new StringBuilder();
-                    for (int i = 0; i < symbols.length; i++) {
-                        if (nullablePositions.contains(i)) {
-                            int bitIndex = nullablePositions.indexOf(i);
-                            // Если бит равен 0 — исключаем символ, иначе оставляем
-                            if ((mask & (1 << bitIndex)) == 0) {
-                                newStr.append(symbols[i]);
-                            }
+                int combos = 1 << pos.size();
+                for (int mask = 1; mask < combos; mask++) {
+                    List<String> candidate = new ArrayList<>();
+                    for (int i = 0; i < rhs.size(); i++) {
+                        if (pos.contains(i)) {
+                            int bit = pos.indexOf(i);
+                            if ((mask & (1 << bit)) == 0) candidate.add(rhs.get(i));
                         } else {
-                            newStr.append(symbols[i]);
+                            candidate.add(rhs.get(i));
                         }
                     }
-                    if (!newStr.toString().isEmpty()) {
-                        newRHS.add(newStr.toString());
-                    }
+                    if (!candidate.isEmpty()) newRHSSet.add(candidate);
                 }
             }
-            newRules.put(lhs, new ArrayList<>(newRHS));
+            newRules.put(lhs, new ArrayList<>(newRHSSet));
         }
 
-        // Возвращаем нормализованную грамматику
-        return new Grammar(VN1, VT, S, newRules);
+        // Собираем и выводим новую грамматику
+        Grammar result = new Grammar(VN1, VT, S, newRules);
+        System.out.println("Нормализованная грамматика");
+        System.out.println(result);
+        return result;
     }
 
+    // Для тестирования прямо из этого файла
     public static void main(String[] args) {
-        Grammar g = transformGrammar();
-        g.printGrammar();
+        Grammar base = Grammar.exampleGrammar();
+        System.out.println("Исходная грамматика");
+        System.out.println(base);
+        transformGrammar(base);
     }
 }

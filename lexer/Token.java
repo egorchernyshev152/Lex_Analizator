@@ -1,5 +1,8 @@
 package lexer;
 
+/**
+ * Класс Token представляет одну лексему.
+ */
 public class Token {
     public final TokenType type;
     public final String value;
@@ -11,8 +14,9 @@ public class Token {
         this.lineNumber = lineNumber;
     }
 
+
     public enum TokenType {
-        // Ключевые слова
+        // Пример с категориями:
         KEYWORD_BEGIN("Keyword"),
         KEYWORD_END("Keyword"),
         KEYWORD_IF("Keyword"),
@@ -24,40 +28,42 @@ public class Token {
         KEYWORD_WHILE("Keyword"),
         KEYWORD_READLN("Keyword"),
         KEYWORD_WRITELN("Keyword"),
+        KEYWORD_IS("Keyword"),
+        KEYWORD_LESS("Keyword"),
+        KEYWORD_THAN("Keyword"),
+        KEYWORD_GREATER("Keyword"),
+        KEYWORD_OR("Keyword"),
+        KEYWORD_EQUAL("Keyword"),
 
-        // Типы данных
-        TYPE_INT("Type"),
-        TYPE_FLOAT("Type"),
-        TYPE_STRING("Type"),
+        IDENTIFIER("Identifier"),
+        INTEGER_LITERAL("Literal"),
+        FLOAT_LITERAL("Literal"),
+        STRING_LITERAL("Literal"),
 
-        // Операторы
+        OP_ASSIGN("Operator"),
         OP_RELATION("Operator"),
         OP_ADDITIVE("Operator"),
         OP_MULTIPLICATIVE("Operator"),
         OP_UNARY("Operator"),
-        OP_ASSIGN("Operator"),
 
-        // Разделители
         SEMICOLON("Delimiter"),
         COLON("Delimiter"),
         COMMA("Delimiter"),
         LPAREN("Delimiter"),
         RPAREN("Delimiter"),
 
-        // Идентификаторы и литералы
-        IDENTIFIER("Identifier"),
-        INTEGER_LITERAL("Literal"),
-        FLOAT_LITERAL("Literal"),
-        STRING_LITERAL("Literal"),
-
-        // Специальные токены
-        COMMENT("Comment"),
+        WHITESPACE("Whitespace"),
         NEWLINE("Newline"),
+        COMMENT("Comment"),
+
+        LPAREN_QUOTE("Delimiter"),
+        QUOTE_RPAREN("Delimiter"),
+
         EOF("EOF");
 
         private final String category;
 
-        TokenType(String category) {
+        private TokenType(String category) {
             this.category = category;
         }
 
@@ -65,4 +71,5 @@ public class Token {
             return category;
         }
     }
+
 }
