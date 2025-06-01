@@ -5,8 +5,15 @@ import java.util.List;
 import lexer.Lexer;
 import lexer.Token;
 import lexer.Token.TokenType;
-
 import static utils.HashTable.printSortedTable;
+
+import parser.Grammar;
+import parser.FirstFollow;
+import parser.ParseTable;
+import parser.LL1Parser;
+import parser.ParseTreeNode;
+
+import java.util.ArrayList;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -25,19 +32,53 @@ public class Main {
             return;
         }
 
-        System.out.println("=== Таблица ключевых слов (имя → индекс) ===");
+        // 1) Детальный вывод токенов (для проверки, что лексер распознаёт именно те символы, что в файле)
+        System.out.println("=== ДЕТАЛЬНЫЙ СПИСОК ТОКЕНОВ (type → value) ===");
+        for (Token t : tokens) {
+            if (t.type != TokenType.WHITESPACE
+                    && t.type != TokenType.NEWLINE
+                    && t.type != TokenType.COMMENT) {
+                System.out.printf("  %-15s → '%s'%n", t.type, t.value);
+            }
+        }
+
+        // 2) Таблицы ключевых слов и идентификаторов
+        System.out.println("\n=== Таблица ключевых слов (имя → индекс) ===");
         printSortedTable(lexer.getKeywordTable());
 
         System.out.println("\n=== Таблица идентификаторов (имя → индекс) ===");
         printSortedTable(lexer.getIdentifierTable());
 
+        // 3) Преобразуем List<Token> → List<String> для LL(1)-парсера
         List<String> tokenValues = getTokenValuesForParser(tokens);
-        System.out.println("\n=== Token Values (для LL(1)) ===");
-        System.out.println(tokenValues);
+        System.out.println("\n>>> tokenValues = " + tokenValues);
+
+        // 4) Построение LL(1)-таблицы и дерева разбора
+        Grammar grammar = Grammar.exampleGrammar();
+        FirstFollow ff = new FirstFollow(grammar);
+        ParseTable pt = new ParseTable(grammar, ff);
+        pt.printParseTable();
+
+        LL1Parser parser = new LL1Parser(grammar, pt);
+        try {
+            ParseTreeNode tree = parser.parse(tokenValues);
+            System.out.println("\n=== Дерево разбора ===");
+            tree.print("");
+        } catch (RuntimeException ex) {
+            System.err.println("\nОшибка синтаксического анализа: " + ex.getMessage());
+        }
+
     }
 
+    /**
+     * Преобразует List<Token> в List<String> для LL(1)-парсера.
+     * Отбрасываем WHITESPACE, NEWLINE, COMMENT.
+     * Для IDENTIFIER, INTEGER_LITERAL, FLOAT_LITERAL, STRING_LITERAL –
+     *    кладём обобщённые метки ("IDENTIFIER", "INTEGER_LITERAL" и т. д.).
+     * Для всех остальных – кладём token.value напрямую (":=", "<", "=", ")", ";", "begin", "if", ...)
+     */
     private static List<String> getTokenValuesForParser(List<Token> tokens) {
-        List<String> tokenValues = new java.util.ArrayList<>();
+        List<String> tokenValues = new ArrayList<>();
         for (Token token : tokens) {
             if (token.type == TokenType.WHITESPACE
                     || token.type == TokenType.NEWLINE

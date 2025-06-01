@@ -1,6 +1,6 @@
-(* Sample program *)
 begin
-  x := 10;
-  y := 20.5;
-  if (x < y) writeln ("x is less than y") else writeln ("x is greater or equal");
+  x := 10 ;
+  y := 20.5 ;
+  if ( x < y ) writeln("x is less or equal than y")
+  else writeln("x is greater than y");
 end

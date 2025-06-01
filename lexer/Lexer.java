@@ -7,7 +7,7 @@ import java.util.regex.*;
 
 /**
  * Лексер с генератором токенов на основе регулярных выражений.
- * Отдельно хранит таблицу ключевых слов и таблицу идентификаторов/литералов.
+ * Хранит таблицу ключевых слов и таблицу идентификаторов/литералов.
  */
 public class Lexer {
 
@@ -22,7 +22,6 @@ public class Lexer {
     private final HashTable<String, Integer> identifierTable = new HashTable<>();
     private final HashTable<String, Boolean> lexemeTable = new HashTable<>();
 
-
     private static class TokenPattern {
         final Token.TokenType type;
         final Pattern pattern;
@@ -35,59 +34,64 @@ public class Lexer {
         }
     }
 
+    // … внутри класса Lexer …
+
     private final List<TokenPattern> tokenPatterns = Arrays.asList(
-            // Ключевые слова — в начале для приоритета
-            new TokenPattern(Token.TokenType.KEYWORD_BEGIN, "begin", false),
-            new TokenPattern(Token.TokenType.KEYWORD_END, "end", false),
-            new TokenPattern(Token.TokenType.KEYWORD_IF, "if", false),
-            new TokenPattern(Token.TokenType.KEYWORD_ELSE, "else", false),
-            new TokenPattern(Token.TokenType.KEYWORD_FOR, "for", false),
-            new TokenPattern(Token.TokenType.KEYWORD_TO, "to", false),
-            new TokenPattern(Token.TokenType.KEYWORD_STEP, "step", false),
-            new TokenPattern(Token.TokenType.KEYWORD_NEXT, "next", false),
-            new TokenPattern(Token.TokenType.KEYWORD_WHILE, "while", false),
-            new TokenPattern(Token.TokenType.KEYWORD_READLN, "readln", false),
-            new TokenPattern(Token.TokenType.KEYWORD_WRITELN, "writeln", false),
-            new TokenPattern(Token.TokenType.KEYWORD_IS, "is", false),
-            new TokenPattern(Token.TokenType.KEYWORD_LESS, "less", false),
-            new TokenPattern(Token.TokenType.KEYWORD_THAN, "than", false),
-            new TokenPattern(Token.TokenType.KEYWORD_GREATER, "greater", false),
-            new TokenPattern(Token.TokenType.KEYWORD_OR, "or", false),
-            new TokenPattern(Token.TokenType.KEYWORD_EQUAL, "equal", false),
+            // 1) Ключевые слова — в начале для приоритета
+            new TokenPattern(Token.TokenType.KEYWORD_BEGIN,   "begin",    false),
+            new TokenPattern(Token.TokenType.KEYWORD_END,     "end",      false),
+            new TokenPattern(Token.TokenType.KEYWORD_IF,      "if",       false),
+            new TokenPattern(Token.TokenType.KEYWORD_ELSE,    "else",     false),
+            new TokenPattern(Token.TokenType.KEYWORD_FOR,     "for",      false),
+            new TokenPattern(Token.TokenType.KEYWORD_TO,      "to",       false),
+            new TokenPattern(Token.TokenType.KEYWORD_STEP,    "step",     false),
+            new TokenPattern(Token.TokenType.KEYWORD_NEXT,    "next",     false),
+            new TokenPattern(Token.TokenType.KEYWORD_WHILE,   "while",    false),
+            new TokenPattern(Token.TokenType.KEYWORD_READLN,  "readln",   false),
+            new TokenPattern(Token.TokenType.KEYWORD_WRITELN, "writeln",  false),
+            new TokenPattern(Token.TokenType.KEYWORD_IS,      "is",       false),
+            new TokenPattern(Token.TokenType.KEYWORD_LESS,    "less",     false),
+            new TokenPattern(Token.TokenType.KEYWORD_THAN,    "than",     false),
+            new TokenPattern(Token.TokenType.KEYWORD_GREATER, "greater",  false),
+            new TokenPattern(Token.TokenType.KEYWORD_OR,      "or",       false),
+            new TokenPattern(Token.TokenType.KEYWORD_EQUAL,   "equal",    false),
 
-            // Пробельные символы и комментарии (пропускаемые)
-            new TokenPattern(Token.TokenType.WHITESPACE, "[ \\t\\r\\f]+", true),
-            new TokenPattern(Token.TokenType.NEWLINE, "\\n", true),
-            new TokenPattern(Token.TokenType.COMMENT, "\\(\\*(.|\\R)*?\\*\\)", true),
+            // 2) Пропускаемые: пробелы, табы, возвращение каретки, перевод строки, комментарии
+            new TokenPattern(Token.TokenType.WHITESPACE, "[ \\t\\r\\f]+",    true),
+            new TokenPattern(Token.TokenType.NEWLINE,    "\\n",               true),
+            new TokenPattern(Token.TokenType.COMMENT,    "\\(\\*(.|\\R)*?\\*\\)", true),
 
-            // Специфичные символы с кавычкой
-            new TokenPattern(Token.TokenType.LPAREN_QUOTE, "\\(\"", false),
-            new TokenPattern(Token.TokenType.QUOTE_RPAREN, "\"\\)", false),
-
-            // Строковые литералы
+            // 3) Строковый литерал
             new TokenPattern(Token.TokenType.STRING_LITERAL, "\"(\\\\.|[^\"\\\\])*\"", false),
 
-            // Числа с плавающей точкой и целые
-            new TokenPattern(Token.TokenType.FLOAT_LITERAL, "\\d+\\.\\d+([eE][+-]?\\d+)?", false),
-            new TokenPattern(Token.TokenType.INTEGER_LITERAL, "\\d+([eE][+-]?\\d+)?", false),
+            // 4) Числа
+            new TokenPattern(Token.TokenType.FLOAT_LITERAL,   "\\d+\\.\\d+([eE][+-]?\\d+)?", false),
+            new TokenPattern(Token.TokenType.INTEGER_LITERAL, "\\d+([eE][+-]?\\d+)?",        false),
 
-            // Идентификаторы (переменные)
+            // 5) Идентификаторы
             new TokenPattern(Token.TokenType.IDENTIFIER, "[a-zA-Z][a-zA-Z0-9]*", false),
 
-            // Операторы
+            // 6) Оператор присваивания ":="
             new TokenPattern(Token.TokenType.OP_ASSIGN, ":=", false),
-            new TokenPattern(Token.TokenType.OP_RELATION, "<=|>=|<>|<|>|=", false),
-            new TokenPattern(Token.TokenType.OP_ADDITIVE, "\\+|-|or", false),
-            new TokenPattern(Token.TokenType.OP_MULTIPLICATIVE, "\\*|/|and", false),
-            new TokenPattern(Token.TokenType.OP_UNARY, "not|!", false),
 
-            // Разделители
-            new TokenPattern(Token.TokenType.SEMICOLON, ";", false),
-            new TokenPattern(Token.TokenType.COLON, ":", false),
-            new TokenPattern(Token.TokenType.COMMA, ",", false),
-            new TokenPattern(Token.TokenType.LPAREN, "\\(", false),
-            new TokenPattern(Token.TokenType.RPAREN, "\\)", false)
+            // 7) Разделители (очень важно — до OP_RELATION!)
+            new TokenPattern(Token.TokenType.SEMICOLON, ";",   false),
+            new TokenPattern(Token.TokenType.COLON,     ":",   false),
+            new TokenPattern(Token.TokenType.COMMA,     ",",   false),
+            new TokenPattern(Token.TokenType.LPAREN,    "\\(", false),
+            new TokenPattern(Token.TokenType.RPAREN,    "\\)", false),
+
+            // 8) Реляционные операторы: <=, >=, <>, <, >, =
+            //    Теперь группируем весь «список альтернатив» в круглые скобки,
+            //    чтобы '^' (добавляемый автоматически при компиляции) применялся ко всем сразу.
+            new TokenPattern(Token.TokenType.OP_RELATION, "(?:<=|>=|<>|<|>|=)", false),
+
+            // 9) Арифметические/логические операторы (любой из этих)
+            new TokenPattern(Token.TokenType.OP_ADDITIVE,       "\\+|-",      false),
+            new TokenPattern(Token.TokenType.OP_MULTIPLICATIVE, "\\*|/|and", false),
+            new TokenPattern(Token.TokenType.OP_UNARY,          "not|!",      false)
     );
+
 
     public Lexer(String input) {
         this.input = input;
@@ -102,13 +106,13 @@ public class Lexer {
 
             for (TokenPattern tp : tokenPatterns) {
                 Matcher matcher = tp.pattern.matcher(remaining);
-
                 if (matcher.find()) {
                     String lexeme = matcher.group();
-                    if (lexeme.length() == 0) {
+                    if (lexeme.isEmpty()) {
                         throw new RuntimeException("Zero length match at position " + position);
                     }
 
+                    // Считаем переносы строки внутри лексемы
                     int newlines = countNewlines(lexeme);
                     lineNumber += newlines;
                     position += lexeme.length();
@@ -118,31 +122,30 @@ public class Lexer {
                         break;
                     }
 
-                    Token.TokenType type = tp.type;
-
-                    // Записываем в отдельные таблицы ключевые слова и идентификаторы/литералы
-                    if ("Keyword".equals(type.getCategory())) {
+                    // Сохраняем в таблицы
+                    if ("Keyword".equals(tp.type.getCategory())) {
                         if (!keywordTable.containsKey(lexeme)) {
                             keywordTable.put(lexeme, nextKeywordIndex++);
                         }
-                    } else if (type == Token.TokenType.IDENTIFIER
-                            || type == Token.TokenType.INTEGER_LITERAL
-                            || type == Token.TokenType.FLOAT_LITERAL) {
+                    } else if (tp.type == Token.TokenType.IDENTIFIER
+                            || tp.type == Token.TokenType.INTEGER_LITERAL
+                            || tp.type == Token.TokenType.FLOAT_LITERAL
+                            || tp.type == Token.TokenType.STRING_LITERAL) {
                         if (!identifierTable.containsKey(lexeme)) {
                             identifierTable.put(lexeme, nextIdentifierIndex++);
                         }
                     }
 
                     lexemeTable.put(lexeme, true);
-
-                    tokens.add(new Token(type, lexeme, lineNumber));
+                    tokens.add(new Token(tp.type, lexeme, lineNumber));
                     matched = true;
                     break;
                 }
             }
 
             if (!matched) {
-                throw new RuntimeException("Unexpected character '" + input.charAt(position) +
+                char unexpected = input.charAt(position);
+                throw new RuntimeException("Unexpected character '" + unexpected +
                         "' at line " + lineNumber + " pos " + position);
             }
         }

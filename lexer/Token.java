@@ -14,9 +14,8 @@ public class Token {
         this.lineNumber = lineNumber;
     }
 
-
     public enum TokenType {
-        // Пример с категориями:
+        // Категория "Keyword"
         KEYWORD_BEGIN("Keyword"),
         KEYWORD_END("Keyword"),
         KEYWORD_IF("Keyword"),
@@ -40,30 +39,27 @@ public class Token {
         FLOAT_LITERAL("Literal"),
         STRING_LITERAL("Literal"),
 
-        OP_ASSIGN("Operator"),
-        OP_RELATION("Operator"),
-        OP_ADDITIVE("Operator"),
-        OP_MULTIPLICATIVE("Operator"),
-        OP_UNARY("Operator"),
+        OP_ASSIGN("Operator"),        // :=
+        OP_RELATION("Operator"),      // <=, >=, <>, <, >, =
+        OP_ADDITIVE("Operator"),      // +, -
+        OP_MULTIPLICATIVE("Operator"),// *, /, and
+        OP_UNARY("Operator"),         // not, !
 
-        SEMICOLON("Delimiter"),
-        COLON("Delimiter"),
-        COMMA("Delimiter"),
-        LPAREN("Delimiter"),
-        RPAREN("Delimiter"),
+        SEMICOLON("Delimiter"),       // ;
+        COLON("Delimiter"),           // :
+        COMMA("Delimiter"),           // ,
+        LPAREN("Delimiter"),          // (
+        RPAREN("Delimiter"),          // )
 
         WHITESPACE("Whitespace"),
         NEWLINE("Newline"),
         COMMENT("Comment"),
 
-        LPAREN_QUOTE("Delimiter"),
-        QUOTE_RPAREN("Delimiter"),
-
         EOF("EOF");
 
         private final String category;
 
-        private TokenType(String category) {
+        TokenType(String category) {
             this.category = category;
         }
 
@@ -71,5 +67,4 @@ public class Token {
             return category;
         }
     }
-
 }

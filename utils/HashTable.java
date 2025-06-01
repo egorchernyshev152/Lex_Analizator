@@ -4,13 +4,11 @@ import java.util.*;
 
 /**
  * Простая хеш-таблица (chaining) для хранения пар (ключ → значение).
- * Добавлен метод containsKey(K) и entries() для получения всех пар.
  */
 public class HashTable<K, V> {
     public static class Entry<K, V> {
         public final K key;
         public final V value;
-
         public Entry(K key, V value) {
             this.key = key;
             this.value = value;
@@ -36,13 +34,11 @@ public class HashTable<K, V> {
         int index = hash(key);
         for (Entry<K, V> entry : table[index]) {
             if (entry.key.equals(key)) {
-                // Обновляем значение, если ключ найден
                 table[index].remove(entry);
                 table[index].add(new Entry<>(key, value));
                 return;
             }
         }
-        // Добавляем новый ключ-значение
         table[index].add(new Entry<>(key, value));
     }
 
@@ -60,9 +56,6 @@ public class HashTable<K, V> {
         return get(key) != null;
     }
 
-    /**
-     * Возвращает список всех пар ключ-значение в таблице.
-     */
     public List<Entry<K, V>> entries() {
         List<Entry<K, V>> allEntries = new ArrayList<>();
         for (int i = 0; i < SIZE; i++) {
@@ -71,9 +64,6 @@ public class HashTable<K, V> {
         return allEntries;
     }
 
-    /**
-     * Для отладки: выводит все пары ключ-значение на консоль.
-     */
     public static <K> void printSortedTable(HashTable<K, Integer> table) {
         List<HashTable.Entry<K, Integer>> entries = table.entries();
         entries.stream()
