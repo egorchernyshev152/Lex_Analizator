@@ -33,14 +33,20 @@ public class Main {
         }
 
         // 1) Детальный вывод токенов (для проверки, что лексер распознаёт именно те символы, что в файле)
-        System.out.println("=== ДЕТАЛЬНЫЙ СПИСОК ТОКЕНОВ (type → value) ===");
+        System.out.println("=== ДЕТАЛЬНЫЙ СПИСОК ТОКЕНОВ (type → value [line,index]) ===");
         for (Token t : tokens) {
             if (t.type != TokenType.WHITESPACE
                     && t.type != TokenType.NEWLINE
                     && t.type != TokenType.COMMENT) {
-                System.out.printf("  %-15s → '%s'%n", t.type, t.value);
+                String quoted = "'" + t.value + "'";
+                System.out.printf(
+                        "  %-15s → %-30s  [строка: %d, токен: %d]%n",
+                        t.type, quoted, t.lineNumber, t.index
+                );
             }
         }
+
+
 
         // 2) Таблицы ключевых слов и идентификаторов
         System.out.println("\n=== Таблица ключевых слов (имя → индекс) ===");

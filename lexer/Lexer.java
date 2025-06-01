@@ -97,8 +97,14 @@ public class Lexer {
         this.input = input;
     }
 
+    /**
+     * Разбивает входную строку на список токенов,
+     * одновременно вычисляя для каждого токена номер строки, столбец и порядковый индекс.
+     */
     public List<Token> tokenize() {
         List<Token> tokens = new ArrayList<>();
+        int tokenIndex = 0;
+        int lastLineOffset = 0; // абсолютная позиция в input, с которой началась текущая строка
 
         while (position < input.length()) {
             String remaining = input.substring(position);
@@ -112,32 +118,48 @@ public class Lexer {
                         throw new RuntimeException("Zero length match at position " + position);
                     }
 
-                    // Считаем переносы строки внутри лексемы
+                    // Подсчёт переносов строки внутри lexeme, чтобы обновить lineNumber и lastLineOffset
                     int newlines = countNewlines(lexeme);
+                    if (newlines > 0) {
+                        int lastNewlineInLexeme = lexeme.lastIndexOf('\n');
+                        lastLineOffset = position + lastNewlineInLexeme + 1;
+                    }
                     lineNumber += newlines;
+
+                    // Вычисляем столбец (column): позиция символа в текущей строке (начиная с 1)
+                    int column = position - lastLineOffset + 1;
+
                     position += lexeme.length();
 
                     if (tp.skip) {
+                        // Пропускаем пробелы/комментарии/новые строки
                         matched = true;
                         break;
                     }
 
-                    // Сохраняем в таблицы
-                    if ("Keyword".equals(tp.type.getCategory())) {
+                    Token.TokenType type = tp.type;
+
+                    // Добавляем в keywordTable или identifierTable при необходимости
+                    if ("Keyword".equals(type.getCategory())) {
                         if (!keywordTable.containsKey(lexeme)) {
                             keywordTable.put(lexeme, nextKeywordIndex++);
                         }
-                    } else if (tp.type == Token.TokenType.IDENTIFIER
-                            || tp.type == Token.TokenType.INTEGER_LITERAL
-                            || tp.type == Token.TokenType.FLOAT_LITERAL
-                            || tp.type == Token.TokenType.STRING_LITERAL) {
+                    } else if (type == Token.TokenType.IDENTIFIER
+                            || type == Token.TokenType.INTEGER_LITERAL
+                            || type == Token.TokenType.FLOAT_LITERAL
+                            || type == Token.TokenType.STRING_LITERAL) {
                         if (!identifierTable.containsKey(lexeme)) {
                             identifierTable.put(lexeme, nextIdentifierIndex++);
                         }
                     }
 
                     lexemeTable.put(lexeme, true);
-                    tokens.add(new Token(tp.type, lexeme, lineNumber));
+
+                    // Создаём токен с дополнительными полями: lineNumber, column и tokenIndex
+                    Token token = new Token(type, lexeme, lineNumber, column, tokenIndex);
+                    tokens.add(token);
+                    tokenIndex++;
+
                     matched = true;
                     break;
                 }
@@ -150,9 +172,13 @@ public class Lexer {
             }
         }
 
-        tokens.add(new Token(Token.TokenType.EOF, "", lineNumber));
+        // Добавляем EOF-токен с индексом tokenIndex, column = 1 (на следующей строке)
+        Token eofToken = new Token(Token.TokenType.EOF, "", lineNumber, 1, tokenIndex);
+        tokens.add(eofToken);
+
         return tokens;
     }
+
 
     private int countNewlines(String s) {
         int count = 0;

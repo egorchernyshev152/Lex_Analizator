@@ -7,11 +7,14 @@ public class Token {
     public final TokenType type;
     public final String value;
     public final int lineNumber;
+    public final int index;       // порядковый номер токена среди всех токенов
 
-    public Token(TokenType type, String value, int lineNumber) {
+    public Token(TokenType type, String value, int lineNumber, int index, int tokenIndex) {
         this.type = type;
         this.value = value;
         this.lineNumber = lineNumber;
+
+        this.index = index;
     }
 
     public enum TokenType {
