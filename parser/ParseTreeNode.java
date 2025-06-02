@@ -24,5 +24,6 @@ public class ParseTreeNode {
         for (ParseTreeNode child : children) {
             child.print(indent + "  ");
         }
+
     }
 }

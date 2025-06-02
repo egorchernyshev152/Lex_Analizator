@@ -18,7 +18,7 @@ public class HashTable<K, V> {
     private static final int SIZE = 16;
     private LinkedList<Entry<K, V>>[] table;
 
-    @SuppressWarnings("unchecked")
+
     public HashTable() {
         table = (LinkedList<Entry<K, V>>[]) new LinkedList[SIZE];
         for (int i = 0; i < SIZE; i++) {

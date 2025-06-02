@@ -34,7 +34,6 @@ public class Lexer {
         }
     }
 
-    // … внутри класса Lexer …
 
     private final List<TokenPattern> tokenPatterns = Arrays.asList(
             // 1) Ключевые слова — в начале для приоритета
@@ -98,8 +97,10 @@ public class Lexer {
     }
 
     /**
-     * Разбивает входную строку на список токенов,
-     * одновременно вычисляя для каждого токена номер строки, столбец и порядковый индекс.
+     * Основной метод: перебираем input, ищем по очереди совпадение с каждым TokenPattern.
+     *   - Если токен «пропускаемый» (skip=true), просто сдвигаем курсор.
+     *   - Иначе создаём Token(type, lexeme, lineNumber, column, index), заполняем таблицы.
+     *   - В конце добавляем EOF-токен.
      */
     public List<Token> tokenize() {
         List<Token> tokens = new ArrayList<>();
@@ -146,8 +147,7 @@ public class Lexer {
                         }
                     } else if (type == Token.TokenType.IDENTIFIER
                             || type == Token.TokenType.INTEGER_LITERAL
-                            || type == Token.TokenType.FLOAT_LITERAL
-                            || type == Token.TokenType.STRING_LITERAL) {
+                            || type == Token.TokenType.FLOAT_LITERAL) {
                         if (!identifierTable.containsKey(lexeme)) {
                             identifierTable.put(lexeme, nextIdentifierIndex++);
                         }
